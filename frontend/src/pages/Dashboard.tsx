@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChatPanel } from '../components/ChatPanel'
 import { MarketList } from '../components/MarketList'
 import { PortfolioPanel } from '../components/PortfolioPanel'
 import { TradeModal } from '../components/TradeModal'
@@ -10,13 +11,17 @@ export function Dashboard() {
   const { portfolio, loading, error, refresh } = usePortfolio()
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-col">
-        <MarketList onSelect={setSelected} />
+    <div className="dashboard-wrap">
+      <div className="dashboard">
+        <div className="dashboard-col">
+          <MarketList onSelect={setSelected} />
+        </div>
+        <div className="dashboard-col">
+          <PortfolioPanel portfolio={portfolio} loading={loading} error={error} onRefresh={refresh} />
+        </div>
       </div>
-      <div className="dashboard-col">
-        <PortfolioPanel portfolio={portfolio} loading={loading} error={error} onRefresh={refresh} />
-      </div>
+
+      <ChatPanel />
 
       {selected && (
         <TradeModal
