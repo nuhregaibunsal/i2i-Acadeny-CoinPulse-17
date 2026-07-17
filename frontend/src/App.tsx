@@ -1,5 +1,6 @@
 import { useSession } from './auth/useSession'
 import { AuthPage } from './pages/AuthPage'
+import { Dashboard } from './pages/Dashboard'
 import './App.css'
 
 function App() {
@@ -19,11 +20,7 @@ function App() {
         )}
       </header>
       <main className="app-main">
-        {isAuthenticated ? (
-          <p className="placeholder">Market, portfolio and assistant coming next.</p>
-        ) : (
-          <AuthPage onAuthenticated={signIn} />
-        )}
+        {isAuthenticated ? <Dashboard /> : <AuthPage onAuthenticated={signIn} />}
       </main>
     </div>
   )
