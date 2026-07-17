@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,11 @@ public class MarketPriceCache {
             entries.put(price.symbol(), price.price().toPlainString());
         }
         redisTemplate.opsForHash().putAll(KEY, entries);
+    }
+
+    public Optional<BigDecimal> getPrice(String symbol) {
+        Object price = redisTemplate.opsForHash().get(KEY, symbol);
+        return price == null ? Optional.empty() : Optional.of(new BigDecimal(price.toString()));
     }
 
     public List<CryptoPrice> getAll() {
