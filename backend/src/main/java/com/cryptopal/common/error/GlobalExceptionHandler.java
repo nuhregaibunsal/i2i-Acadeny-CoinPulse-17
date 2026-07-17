@@ -1,5 +1,6 @@
 package com.cryptopal.common.error;
 
+import com.cryptopal.ai.exception.LlmUnavailableException;
 import com.cryptopal.auth.exception.InvalidCredentialsException;
 import com.cryptopal.auth.exception.UsernameAlreadyExistsException;
 import com.cryptopal.trading.exception.InsufficientFundsException;
@@ -28,6 +29,11 @@ public class GlobalExceptionHandler {
             UnknownAssetException.class})
     public ResponseEntity<ErrorResponse> handleBadTrade(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(LlmUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleLlmUnavailable(LlmUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
