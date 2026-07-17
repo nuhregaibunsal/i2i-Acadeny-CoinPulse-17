@@ -3,17 +3,22 @@ package com.cryptopal.trading.service;
 import com.cryptopal.auth.entity.Wallet;
 import com.cryptopal.auth.repository.WalletRepository;
 import com.cryptopal.market.cache.MarketPriceCache;
+import com.cryptopal.trading.dto.HoldingView;
 import com.cryptopal.trading.dto.OrderRequest;
 import com.cryptopal.trading.dto.OrderResponse;
+import com.cryptopal.trading.dto.PortfolioResponse;
 import com.cryptopal.trading.entity.Holding;
 import com.cryptopal.trading.entity.Transaction;
 import com.cryptopal.trading.exception.InsufficientFundsException;
+import com.cryptopal.trading.exception.InsufficientHoldingsException;
 import com.cryptopal.trading.exception.UnknownAssetException;
 import com.cryptopal.trading.model.OrderSide;
 import com.cryptopal.trading.repository.HoldingRepository;
 import com.cryptopal.trading.repository.TransactionRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,10 +42,10 @@ public class TradingService {
 
     @Transactional
     public OrderResponse execute(Long userId, OrderRequest request) {
-        if (request.side() == OrderSide.BUY) {
-            return buy(userId, request);
-        }
-        throw new UnsupportedOperationException("SELL not implemented yet");
+        return switch (request.side()) {
+            case BUY -> buy(userId, request);
+            case SELL -> sell(userId, request);
+        };
     }
 
     private OrderResponse buy(Long userId, OrderRequest request) {
@@ -65,6 +70,55 @@ public class TradingService {
                 new Transaction(userId, OrderSide.BUY.name(), symbol, request.volume(), price, cost));
 
         return new OrderResponse(symbol, OrderSide.BUY, request.volume(), price, cost, wallet.getCashBalance());
+    }
+
+    private OrderResponse sell(Long userId, OrderRequest request) {
+        String symbol = request.symbol().toUpperCase();
+        BigDecimal price = currentPrice(symbol);
+
+        Holding holding = holdingRepository.findByUserIdAndAssetSymbol(userId, symbol)
+                .orElseThrow(() -> new InsufficientHoldingsException(symbol));
+        if (holding.getVolume().compareTo(request.volume()) < 0) {
+            throw new InsufficientHoldingsException(symbol);
+        }
+
+        BigDecimal proceeds = price.multiply(request.volume()).setScale(2, RoundingMode.HALF_UP);
+        holding.setVolume(holding.getVolume().subtract(request.volume()));
+        holdingRepository.save(holding);
+
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Wallet not found for user " + userId));
+        wallet.setCashBalance(wallet.getCashBalance().add(proceeds));
+        walletRepository.save(wallet);
+
+        transactionRepository.save(
+                new Transaction(userId, OrderSide.SELL.name(), symbol, request.volume(), price, proceeds));
+
+        return new OrderResponse(symbol, OrderSide.SELL, request.volume(), price, proceeds, wallet.getCashBalance());
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioResponse getPortfolio(Long userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Wallet not found for user " + userId));
+
+        List<HoldingView> holdings = holdingRepository.findByUserId(userId).stream()
+                .filter(holding -> holding.getVolume().compareTo(BigDecimal.ZERO) > 0)
+                .map(this::toHoldingView)
+                .sorted(Comparator.comparing(HoldingView::symbol))
+                .toList();
+
+        BigDecimal holdingsValue = holdings.stream()
+                .map(HoldingView::value)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new PortfolioResponse(wallet.getCashBalance(), holdingsValue, holdings);
+    }
+
+    private HoldingView toHoldingView(Holding holding) {
+        BigDecimal price = marketPriceCache.getPrice(holding.getAssetSymbol()).orElse(BigDecimal.ZERO);
+        BigDecimal value = price.multiply(holding.getVolume()).setScale(2, RoundingMode.HALF_UP);
+        return new HoldingView(holding.getAssetSymbol(), holding.getVolume(), price, value);
     }
 
     private BigDecimal currentPrice(String symbol) {
