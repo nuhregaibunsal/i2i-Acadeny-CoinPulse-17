@@ -5,6 +5,7 @@ import com.cryptopal.auth.exception.InvalidCredentialsException;
 import com.cryptopal.auth.exception.UsernameAlreadyExistsException;
 import com.cryptopal.trading.exception.InsufficientFundsException;
 import com.cryptopal.trading.exception.InsufficientHoldingsException;
+import com.cryptopal.trading.exception.RecipientNotFoundException;
 import com.cryptopal.trading.exception.UnknownAssetException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({InsufficientFundsException.class, InsufficientHoldingsException.class,
-            UnknownAssetException.class})
+            UnknownAssetException.class, RecipientNotFoundException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleBadTrade(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage()));
     }

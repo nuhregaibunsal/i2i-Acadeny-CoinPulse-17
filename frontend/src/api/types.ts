@@ -40,14 +40,45 @@ export interface HoldingView {
   volume: number
   currentPrice: number
   value: number
+  avgBuyPrice: number
+  profitLoss: number
+  profitLossPct: number
 }
 
 export interface PortfolioResponse {
   cashBalance: number
   holdingsValue: number
+  totalProfitLoss: number
   holdings: HoldingView[]
 }
 
 export interface AiQueryResponse {
   answer: string
+}
+
+export interface PricePoint {
+  price: number
+  time: number
+}
+
+export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'SEND' | 'RECEIVE'
+
+export interface TransactionRecord {
+  type: TransactionType
+  symbol: string | null
+  volume: number | null
+  price: number | null
+  totalValue: number
+  createdAt: string
+}
+
+export interface ConditionalOrderView {
+  id: number
+  symbol: string
+  side: OrderSide
+  direction: 'ABOVE' | 'BELOW'
+  targetPrice: number
+  volume: number
+  status: string
+  createdAt: string
 }

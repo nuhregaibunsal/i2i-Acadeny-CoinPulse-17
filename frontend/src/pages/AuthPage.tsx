@@ -2,14 +2,18 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { login, registerUser } from '../api/endpoints'
+import { CoinBackdrop } from '../components/CoinBackdrop'
+import { useI18n } from '../i18n/I18nProvider'
 
 type Mode = 'login' | 'register'
 
 interface AuthPageProps {
   onAuthenticated: (token: string, username: string) => void
+  onGuest: () => void
 }
 
-export function AuthPage({ onAuthenticated }: AuthPageProps) {
+export function AuthPage({ onAuthenticated, onGuest }: AuthPageProps) {
+  const { t } = useI18n()
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -31,12 +35,12 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
     try {
       if (mode === 'register') {
         const created = await registerUser(username, password)
-        setNotice(`Account created with a starting balance of $${created.startingBalance.toFixed(2)}.`)
+        setNotice(t('auth.accountCreated', { balance: created.startingBalance.toFixed(2) }))
       }
       const session = await login(username, password)
       onAuthenticated(session.token, session.username)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+      setError(err instanceof ApiError ? err.message : t('auth.genericError'))
     } finally {
       setBusy(false)
     }
@@ -44,10 +48,11 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
   return (
     <div className="auth-wrap">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <h2>{mode === 'login' ? 'Sign in' : 'Create account'}</h2>
+      <form className="auth-card glow-card" onSubmit={handleSubmit}>
+        <CoinBackdrop />
+        <h2>{mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}</h2>
 
-        <label htmlFor="username">Username</label>
+        <label htmlFor="username">{t('auth.username')}</label>
         <input
           id="username"
           value={username}
@@ -56,7 +61,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
           required
         />
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">{t('auth.password')}</label>
         <input
           id="password"
           type="password"
@@ -71,26 +76,32 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
         <button type="submit" disabled={busy}>
           {busy ? <span className="spinner" /> : null}
-          {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+          {busy ? t('auth.pleaseWait') : mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}
         </button>
 
         <p className="auth-switch">
           {mode === 'login' ? (
             <>
-              No account?{' '}
+              {t('auth.noAccount')}{' '}
               <button type="button" className="link" onClick={() => switchMode('register')}>
-                Create one
+                {t('auth.createOne')}
               </button>
             </>
           ) : (
             <>
-              Already registered?{' '}
+              {t('auth.alreadyRegistered')}{' '}
               <button type="button" className="link" onClick={() => switchMode('login')}>
-                Sign in
+                {t('auth.signIn')}
               </button>
             </>
           )}
         </p>
+
+        <div className="auth-divider" />
+
+        <button type="button" className="secondary guest-btn" onClick={onGuest}>
+          {t('auth.continueAsGuest')}
+        </button>
       </form>
     </div>
   )

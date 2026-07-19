@@ -40,6 +40,15 @@ public class AiContextBuilder {
         context.append("You are CryptoPal's market assistant. Answer using ONLY the data below. ")
                 .append("Be concise and use Markdown. If the data does not contain the answer, say so. ")
                 .append("You are not a licensed financial advisor: do not give personalised investment advice.\n\n");
+        context.append("This is a simulated trading app. If (and only if) the user explicitly asks to ")
+                .append("place, set, or create a buy or sell order — including conditional orders like ")
+                .append("'buy AVAX if it drops to 33.44' or 'sell 2 BTC if it rises to 70000' — reply with ONLY ")
+                .append("a raw JSON object and no other text, in exactly this shape:\n")
+                .append("{\"action\":\"order\",\"orderType\":\"instant|conditional\",\"symbol\":\"AVAX\",")
+                .append("\"side\":\"BUY|SELL\",\"targetPrice\":33.44,\"volume\":2}\n")
+                .append("Omit targetPrice for instant orders. Compute volume in coins; if the user gives a ")
+                .append("dollar amount, divide it by the relevant price. For every other message, answer ")
+                .append("normally in the user's language.\n\n");
 
         context.append("## User\n").append(username).append("\n\n");
         appendPortfolio(context, userId);

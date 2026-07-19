@@ -3,7 +3,7 @@ import { ApiError } from '../api/client'
 import { fetchPortfolio } from '../api/endpoints'
 import type { PortfolioResponse } from '../api/types'
 
-const POLL_INTERVAL_MS = 15000
+const POLL_INTERVAL_MS = 6000
 
 interface UsePortfolioResult {
   portfolio: PortfolioResponse | null
@@ -12,12 +12,15 @@ interface UsePortfolioResult {
   refresh: () => void
 }
 
-export function usePortfolio(): UsePortfolioResult {
+export function usePortfolio(enabled = true): UsePortfolioResult {
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
 
   const load = useCallback(async () => {
+    if (!enabled) {
+      return
+    }
     setLoading(true)
     try {
       setPortfolio(await fetchPortfolio())
@@ -27,13 +30,16 @@ export function usePortfolio(): UsePortfolioResult {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
     load()
     const timer = window.setInterval(load, POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
-  }, [load])
+  }, [enabled, load])
 
   return { portfolio, error, loading, refresh: load }
 }

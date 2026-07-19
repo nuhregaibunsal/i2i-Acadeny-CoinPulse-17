@@ -35,13 +35,13 @@ public class TickerEnginePriceProvider implements PriceDataProvider {
         return snapshot;
     }
 
-    @Scheduled(fixedRate = 15000)
+    @Scheduled(fixedRate = 1000)
     void fluctuate() {
         prices.replaceAll((symbol, price) -> nextPrice(price));
     }
 
     private BigDecimal nextPrice(BigDecimal current) {
-        double changePercent = ThreadLocalRandom.current().nextGaussian() * 0.01;
+        double changePercent = ThreadLocalRandom.current().nextGaussian() * 0.004;
         BigDecimal next = current.multiply(BigDecimal.valueOf(1 + changePercent));
         if (next.compareTo(MIN_PRICE) < 0) {
             next = MIN_PRICE;

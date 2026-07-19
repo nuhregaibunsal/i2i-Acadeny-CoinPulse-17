@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../api/client'
-import { executeOrder } from '../api/endpoints'
+import { createConditionalOrder, executeOrder } from '../api/endpoints'
+import { CoinIcon } from './CoinIcon'
+import { PricePicker } from './PricePicker'
+import { useI18n } from '../i18n/I18nProvider'
 import type { CryptoPrice, OrderSide, PortfolioResponse } from '../api/types'
+
+type OrderType = 'instant' | 'conditional'
 
 interface TradeModalProps {
   price: CryptoPrice
@@ -12,6 +17,8 @@ interface TradeModalProps {
 }
 
 export function TradeModal({ price, portfolio, onClose, onExecuted }: TradeModalProps) {
+  const { t } = useI18n()
+
   const held = useMemo(() => {
     const holding = portfolio?.holdings.find((item) => item.symbol === price.symbol)
     return holding ? holding.volume : 0
@@ -19,34 +26,56 @@ export function TradeModal({ price, portfolio, onClose, onExecuted }: TradeModal
 
   const canSell = held > 0
   const [side, setSide] = useState<OrderSide>('BUY')
-  const [volume, setVolume] = useState('')
+  const [orderType, setOrderType] = useState<OrderType>('instant')
+  const [amount, setAmount] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [target, setTarget] = useState(price.price)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const numericVolume = Number(volume)
-  const estimated =
-    Number.isFinite(numericVolume) && numericVolume > 0 ? numericVolume * price.price : 0
+  function onAmountChange(value: string) {
+    setAmount(value)
+    const numeric = Number(value)
+    setQuantity(numeric > 0 && price.price > 0 ? (numeric / price.price).toFixed(8) : '')
+  }
+
+  function onQuantityChange(value: string) {
+    setQuantity(value)
+    const numeric = Number(value)
+    setAmount(numeric > 0 ? (numeric * price.price).toFixed(2) : '')
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     setResult(null)
-    if (!(numericVolume > 0)) {
-      setError('Enter a volume greater than zero.')
+    const volume = Number(quantity)
+    if (!(volume > 0)) {
+      setError(t('trade.invalidAmount'))
+      return
+    }
+    if (orderType === 'conditional' && !(target > 0)) {
+      setError(t('trade.invalidAmount'))
       return
     }
     setBusy(true)
     try {
-      const order = await executeOrder({ symbol: price.symbol, side, volume: numericVolume })
-      setResult(
-        `${order.side} ${order.volume} ${order.symbol} for $${order.totalValue.toFixed(2)}. ` +
-          `Cash balance: $${order.cashBalance.toFixed(2)}.`,
-      )
-      setVolume('')
+      if (orderType === 'conditional') {
+        await createConditionalOrder({ symbol: price.symbol, side, targetPrice: target, volume })
+        setResult(t('trade.placed'))
+      } else {
+        const order = await executeOrder({ symbol: price.symbol, side, volume })
+        setResult(
+          `${t(side === 'BUY' ? 'trade.buy' : 'trade.sell')} ${order.volume} ${order.symbol} · $${order.totalValue.toFixed(2)}`,
+        )
+      }
+      setAmount('')
+      setQuantity('')
+      setTarget(price.price)
       onExecuted()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Order failed. Please try again.')
+      setError(err instanceof ApiError ? err.message : t('trade.failed'))
     } finally {
       setBusy(false)
     }
@@ -62,10 +91,11 @@ export function TradeModal({ price, portfolio, onClose, onExecuted }: TradeModal
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-head">
-          <h2>
+          <h2 className="modal-title">
+            <CoinIcon symbol={price.symbol} size={26} />
             {price.symbol} · ${price.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </h2>
-          <button type="button" className="link" onClick={onClose} aria-label="Close">
+          <button type="button" className="close-x" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
@@ -76,7 +106,7 @@ export function TradeModal({ price, portfolio, onClose, onExecuted }: TradeModal
             className={side === 'BUY' ? 'tab active' : 'tab'}
             onClick={() => selectSide('BUY')}
           >
-            Buy
+            {t('trade.buy')}
           </button>
           <button
             type="button"
@@ -84,34 +114,65 @@ export function TradeModal({ price, portfolio, onClose, onExecuted }: TradeModal
             onClick={() => selectSide('SELL')}
             disabled={!canSell}
           >
-            Sell
+            {t('trade.sell')}
+          </button>
+        </div>
+
+        <div className="mode-toggle">
+          <button
+            type="button"
+            className={orderType === 'instant' ? 'chip active' : 'chip'}
+            onClick={() => setOrderType('instant')}
+          >
+            {t('trade.instant')}
+          </button>
+          <button
+            type="button"
+            className={orderType === 'conditional' ? 'chip active' : 'chip'}
+            onClick={() => setOrderType('conditional')}
+          >
+            {t('trade.conditional')}
           </button>
         </div>
 
         <p className="muted small">
-          {canSell ? `You hold ${held} ${price.symbol}.` : `You don't hold any ${price.symbol} yet.`}
+          {canSell
+            ? t('trade.youHold', { volume: held, symbol: price.symbol })
+            : t('trade.dontHold', { symbol: price.symbol })}
         </p>
 
         <form onSubmit={submit}>
-          <label htmlFor="volume">Volume ({price.symbol})</label>
+          {orderType === 'conditional' && (
+            <>
+              <label>{t('trade.targetPrice')}</label>
+              <PricePicker current={price.price} value={target} onChange={setTarget} />
+            </>
+          )}
+
+          <label htmlFor="trade-amount">{t('trade.amount')}</label>
           <input
-            id="volume"
-            value={volume}
-            onChange={(event) => setVolume(event.target.value)}
+            id="trade-amount"
+            value={amount}
+            onChange={(event) => onAmountChange(event.target.value)}
+            inputMode="decimal"
+            placeholder="1000"
+          />
+
+          <label htmlFor="trade-quantity">{t('trade.volume', { symbol: price.symbol })}</label>
+          <input
+            id="trade-quantity"
+            value={quantity}
+            onChange={(event) => onQuantityChange(event.target.value)}
             inputMode="decimal"
             placeholder="0.00"
-            autoFocus
           />
-          <p className="muted small">
-            Estimated {side === 'BUY' ? 'cost' : 'proceeds'}: ${estimated.toFixed(2)}
-          </p>
 
           {error && <p className="alert alert-error">{error}</p>}
           {result && <p className="alert alert-notice">{result}</p>}
 
           <button type="submit" disabled={busy}>
             {busy ? <span className="spinner" /> : null}
-            {busy ? 'Executing…' : 'Execute Order'}
+            {busy ? t('trade.executing') : t('trade.execute')}
           </button>
         </form>
       </div>

@@ -11,6 +11,7 @@ export default defineConfig({
       '/auth': backend,
       '/market': backend,
       '/trading': backend,
+      '/wallet': backend,
       '/ai': backend,
     },
   },

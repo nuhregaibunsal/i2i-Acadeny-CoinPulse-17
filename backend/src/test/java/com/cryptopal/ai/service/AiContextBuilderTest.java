@@ -40,8 +40,10 @@ class AiContextBuilderTest {
         when(tradingService.getPortfolio(1L)).thenReturn(new PortfolioResponse(
                 new BigDecimal("5000.00"),
                 new BigDecimal("3200.00"),
+                new BigDecimal("200.00"),
                 List.of(new HoldingView("BTC", new BigDecimal("0.05"),
-                        new BigDecimal("64000.00"), new BigDecimal("3200.00")))));
+                        new BigDecimal("64000.00"), new BigDecimal("3200.00"),
+                        new BigDecimal("60000.00"), new BigDecimal("200.00"), new BigDecimal("6.67")))));
         when(marketPriceCache.getAll()).thenReturn(List.of(new CryptoPrice("BTC", new BigDecimal("64000.00"))));
 
         Transaction transaction = Mockito.mock(Transaction.class);
@@ -67,7 +69,7 @@ class AiContextBuilderTest {
     @Test
     void build_handlesEmptyPortfolioAndNoTransactions() {
         when(tradingService.getPortfolio(2L)).thenReturn(
-                new PortfolioResponse(new BigDecimal("10000.00"), BigDecimal.ZERO, List.of()));
+                new PortfolioResponse(new BigDecimal("10000.00"), BigDecimal.ZERO, BigDecimal.ZERO, List.of()));
         when(marketPriceCache.getAll()).thenReturn(List.of());
         when(transactionRepository.findByUserIdOrderByCreatedAtDesc(2L)).thenReturn(List.of());
 

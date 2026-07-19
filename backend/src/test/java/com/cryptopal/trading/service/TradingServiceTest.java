@@ -18,6 +18,7 @@ import com.cryptopal.trading.exception.InsufficientFundsException;
 import com.cryptopal.trading.exception.InsufficientHoldingsException;
 import com.cryptopal.trading.exception.UnknownAssetException;
 import com.cryptopal.trading.model.OrderSide;
+import com.cryptopal.trading.repository.CashTransactionRepository;
 import com.cryptopal.trading.repository.HoldingRepository;
 import com.cryptopal.trading.repository.TransactionRepository;
 import java.math.BigDecimal;
@@ -31,6 +32,7 @@ class TradingServiceTest {
     private WalletRepository walletRepository;
     private HoldingRepository holdingRepository;
     private TransactionRepository transactionRepository;
+    private CashTransactionRepository cashTransactionRepository;
     private MarketPriceCache marketPriceCache;
     private TradingService tradingService;
 
@@ -39,9 +41,11 @@ class TradingServiceTest {
         walletRepository = Mockito.mock(WalletRepository.class);
         holdingRepository = Mockito.mock(HoldingRepository.class);
         transactionRepository = Mockito.mock(TransactionRepository.class);
+        cashTransactionRepository = Mockito.mock(CashTransactionRepository.class);
         marketPriceCache = Mockito.mock(MarketPriceCache.class);
         tradingService = new TradingService(
-                walletRepository, holdingRepository, transactionRepository, marketPriceCache);
+                walletRepository, holdingRepository, transactionRepository,
+                cashTransactionRepository, marketPriceCache);
     }
 
     @Test

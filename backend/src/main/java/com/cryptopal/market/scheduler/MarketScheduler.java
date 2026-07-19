@@ -24,7 +24,7 @@ public class MarketScheduler {
         this.priceSnapshotRepository = priceSnapshotRepository;
     }
 
-    @Scheduled(fixedRate = 15000)
+    @Scheduled(fixedRate = 2000)
     public void refreshCache() {
         marketPriceCache.putAll(priceDataProvider.currentPrices());
     }

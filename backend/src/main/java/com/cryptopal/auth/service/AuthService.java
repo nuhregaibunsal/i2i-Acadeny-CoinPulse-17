@@ -1,5 +1,6 @@
 package com.cryptopal.auth.service;
 
+import com.cryptopal.auth.dto.ChangePasswordRequest;
 import com.cryptopal.auth.dto.LoginRequest;
 import com.cryptopal.auth.dto.LoginResponse;
 import com.cryptopal.auth.dto.RegisterRequest;
@@ -64,6 +65,17 @@ public class AuthService {
 
         String token = sessionTokenService.issueToken(user.getId(), user.getUsername());
         return new LoginResponse(token, user.getUsername());
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(InvalidCredentialsException::new);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     private BigDecimal randomStartingBalance() {

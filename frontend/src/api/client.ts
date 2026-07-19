@@ -47,6 +47,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   }
 
   if (!response.ok) {
+    if (response.status === 401 && getToken()) {
+      clearSession()
+      window.location.reload()
+    }
     throw new ApiError(await readErrorMessage(response), response.status)
   }
 

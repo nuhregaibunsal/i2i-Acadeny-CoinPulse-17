@@ -1,33 +1,58 @@
 import { useState } from 'react'
-import { ChatPanel } from '../components/ChatPanel'
+import { CoinDetail } from '../components/CoinDetail'
 import { MarketList } from '../components/MarketList'
+import { OrdersView } from '../components/OrdersView'
 import { PortfolioPanel } from '../components/PortfolioPanel'
 import { TradeModal } from '../components/TradeModal'
+import { TransactionsView } from '../components/TransactionsView'
 import { usePortfolio } from '../hooks/usePortfolio'
 import type { CryptoPrice } from '../api/types'
 
-export function Dashboard() {
+interface DashboardProps {
+  view: 'market' | 'portfolio' | 'history' | 'orders'
+  canTrade: boolean
+}
+
+export function Dashboard({ view, canTrade }: DashboardProps) {
   const [selected, setSelected] = useState<CryptoPrice | null>(null)
-  const { portfolio, loading, error, refresh } = usePortfolio()
+  const [tradeCoin, setTradeCoin] = useState<CryptoPrice | null>(null)
+  const { portfolio, loading, error, refresh } = usePortfolio(canTrade)
 
   return (
-    <div className="dashboard-wrap">
-      <div className="dashboard">
-        <div className="dashboard-col">
-          <MarketList onSelect={setSelected} />
+    <div className="view">
+      {view === 'market' && (
+        <div className={selected ? 'market-layout has-selection' : 'market-layout'}>
+          <div className="market-col">
+            <MarketList
+              onSelect={(coin) =>
+                setSelected((prev) => (prev?.symbol === coin.symbol ? null : coin))
+              }
+              canTrade={canTrade}
+              selected={selected}
+            />
+          </div>
+          <div className="detail-col">
+            <CoinDetail price={selected} canTrade={canTrade} onTrade={setTradeCoin} />
+          </div>
         </div>
-        <div className="dashboard-col">
-          <PortfolioPanel portfolio={portfolio} loading={loading} error={error} onRefresh={refresh} />
-        </div>
-      </div>
-
-      <ChatPanel />
-
-      {selected && (
-        <TradeModal
-          price={selected}
+      )}
+      {view === 'portfolio' && (
+        <PortfolioPanel
           portfolio={portfolio}
-          onClose={() => setSelected(null)}
+          loading={loading}
+          error={error}
+          onRefresh={refresh}
+          onSelect={setTradeCoin}
+        />
+      )}
+      {view === 'history' && <TransactionsView />}
+      {view === 'orders' && <OrdersView />}
+
+      {tradeCoin && canTrade && (
+        <TradeModal
+          price={tradeCoin}
+          portfolio={portfolio}
+          onClose={() => setTradeCoin(null)}
           onExecuted={refresh}
         />
       )}

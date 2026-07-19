@@ -32,6 +32,7 @@ springdoc:
 
 data-provider:
   profile: ${DATA_PROVIDER_PROFILE:ticker}
+  live-url: ${DATA_PROVIDER_LIVE_URL:https://api.coingecko.com/api/v3}
 
 gemini:
   api-key: ${GEMINI_API_KEY:}

@@ -1,5 +1,6 @@
 package com.cryptopal.auth.web;
 
+import com.cryptopal.auth.dto.ChangePasswordRequest;
 import com.cryptopal.auth.dto.LoginRequest;
 import com.cryptopal.auth.dto.LoginResponse;
 import com.cryptopal.auth.dto.RegisterRequest;
@@ -39,5 +40,12 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<AuthenticatedUser> me(@AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/password")
+    public ResponseEntity<Void> changePassword(@AuthenticationPrincipal AuthenticatedUser user,
+                                               @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(user.userId(), request);
+        return ResponseEntity.noContent().build();
     }
 }
